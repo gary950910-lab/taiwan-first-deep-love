@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}策略回測控制面板 | 台灣第一深愛交易系統{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row font-noto">
+    <!-- Header Section -->
+    <div class="col-12 mb-4">
+        <h1 class="font-outfit fw-bold tracking-wide text-gradient mb-2">STRATEGY BACKTESTING PANEL</h1>
+        <p class="text-secondary">開發階段 F-03: 策略回測核心演算法 (T+1 開盤進場、停損停利觸發計算)</p>
+    </div>
+</div>
+
+<div class="row font-noto g-4">
+    <!-- Control Form Card -->
+    <div class="col-lg-4 col-12">
+        <div class="glass-card h-100">
+            <h4 class="mb-4 fw-bold text-gradient d-flex align-items-center">
+                <i class="bi bi-sliders2 me-2"></i> 回測參數設定
+            </h4>
+            <form id="backtestForm">
+                <!-- Stock Ticker -->
+                <div class="mb-3">
+                    <label for="ticker" class="form-label text-secondary small fw-bold">個股代碼</label>
+                    <input type="text" class="form-control form-control-premium" id="ticker" name="ticker" value="2330.TW" placeholder="例如：2330.TW, AAPL">
+                    <div class="form-text text-muted small">台股請加 .TW 字尾，美股直接輸入代號。</div>
+                </div>
+
+                <!-- Strategy Select -->
+                <div class="mb-3">
+                    <label for="strategy" class="form-label text-secondary small fw-bold">觸發進場策略</label>
+                    <select class="form-select form-control-premium form-select-premium" id="strategy" name="strategy">
+                        <option value="KD" selected>KD 黃金交叉 (K值向上突破D值)</option>
+                        <option value="MACD">MACD 黃金交叉 (DIF向上突破DEA)</option>
+                        <option value="BuyHold">買入持有策略 (第一天買入)</option>
+                    </select>
+                </div>
+
+                <!-- Start & End Date -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label for="start_date" class="form-label text-secondary small fw-bold">起始日期</label>
+                        <input type="date" class="form-control form-control-premium" id="start_date" name="start_date" value="{{ default_start }}">
+                    </div>
+                    <div class="col-6">
+                        <label for="end_date" class="form-label text-secondary small fw-bold">結束日期</label>
+                        <input type="date" class="form-control form-control-premium" id="end_date" name="end_date" value="{{ default_end }}">
+                    </div>
+                </div>
+
+                <!-- Stop Loss & Take Profit -->
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <label for="stop_loss_pct" class="form-label text-secondary small fw-bold">停損比例 (SL %)</label>
+                        <div class="input-group">
+                            <input type="number" step="0.1" class="form-control form-control-premium" id="stop_loss_pct" name="stop_loss_pct" value="5.0">
+                            <span class="input-group-text bg-transparent border-secondary border-opacity-20 text-secondary">%</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label for="take_profit_pct" class="form-label text-secondary small fw-bold">停利比例 (TP %)</label>
+                        <div class="input-group">
+                            <input type="number" step="0.1" class="form-control form-control-premium" id="take_profit_pct" name="take_profit_pct" value="10.0">
+                            <span class="input-group-text bg-transparent border-secondary border-opacity-20 text-secondary">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-premium w-100 py-3 d-flex align-items-center justify-content-center" id="btnSubmit">
+                    <i class="bi bi-play-circle-fill me-2"></i> 啟動回測引擎
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Results Container -->
+    <div class="col-lg-8 col-12">
+        <!-- Loading Spinner -->
+        <div id="loaderSection" class="glass-card h-100 d-flex flex-column align-items-center justify-content-center text-center py-5 d-none">
+            <span class="loader mb-4"></span>
+            <h5 class="fw-bold text-gradient">回測運算引擎啟動中...</h5>
+            <p class="text-secondary small mt-2">正在載入歷史日線資料、運算指標訊號與停損/停利點...</p>
+        </div>
+
+        <!-- Initial Guide Message -->
+        <div id="guideSection" class="glass-card h-100 d-flex flex-column align-items-center justify-content-center text-center py-5">
+            <div class="brand-glow mb-4" style="font-size: 3rem;"><i class="bi bi-graph-up"></i></div>
+            <h4 class="fw-bold">準備好驗證您的投資策略了嗎？</h4>
+            <p class="text-secondary col-md-8 mx-auto">請在左側面板中輸入股票代碼與策略參數，點擊 **啟動回測引擎**。系統將立即依據 T+1 進場規則與動態停損/停利邏輯進行模擬分析。</p>
+        </div>
+
+        <!-- Real Results Section (Hidden Initially) -->
+        <div id="resultsSection" class="d-none">
+            <!-- 4 Metrics Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-6">
+                    <div class="metric-card">
+                        <div class="metric-title">總累積收益率</div>
+                        <div class="metric-value text-gradient-success" id="metricTotalReturn">0.0%</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="metric-card">
+                        <div class="metric-title">交易勝率</div>
+                        <div class="metric-value" style="color: #60a5fa;" id="metricWinRate">0.0%</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="metric-card">
+                        <div class="metric-title">策略盈虧比</div>
+                        <div class="metric-value" style="color: #fbbf24;" id="metricProfitLossRatio">0.0</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="metric-card">
+                        <div class="metric-title">最大資金回撤</div>
+                        <div class="metric-value text-gradient-danger" id="metricMaxDrawdown">0.0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Card -->
+            <div class="glass-card mb-4">
+                <h5 class="mb-4 fw-bold text-gradient d-flex align-items-center justify-content-between">
+                    <span><i class="bi bi-activity me-2"></i> 回測累積收益曲線 (vs. 買入持有標的)</span>
+                    <span class="badge badge-info-premium" id="resultTickerHeader">2330.TW - KD Strategy</span>
+                </h5>
+                <div class="chart-container">
+                    <canvas id="equityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Trade Details Table Card (Hidden Initially) -->
+<div class="row mt-4 d-none" id="tradesSection">
+    <div class="col-12">
+        <div class="glass-card">
+            <h5 class="mb-4 fw-bold text-gradient"><i class="bi bi-list-columns-reverse me-2"></i> 回測模擬交易詳細歷程</h5>
+            <div class="table-responsive">
+                <table class="table table-premium table-borderless" id="tradesTable">
+                    <thead>
+                        <tr>
+                            <th>交易動作</th>
+                            <th>交易日期</th>
+                            <th>成交價格 (TWD/USD)</th>
+                            <th>交易說明 / 觸發原因</th>
+                            <th>部位進場日期</th>
+                            <th>部位進場價格</th>
+                            <th>損益百分比</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tradesTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Core Backtest Frontend JS -->
+<script src="{{ url_for('static', filename='js/backtest.js') }}"></script>
+{% endblock %}
