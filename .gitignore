@@ -5,3 +5,6 @@ extracted_pdf.txt
 .env
 .vscode/
 .idea/
+backend/.yf_cache/
+backend/taiwan_stock.db
+backend/temp_*.html
