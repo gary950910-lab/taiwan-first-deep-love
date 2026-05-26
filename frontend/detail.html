@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紀錄明細 | 台股自動篩選器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="fade-in">
+            <h1>台股自動篩選器</h1>
+            <nav>
+                <a href="index.html" class="btn btn-primary">返回列表</a>
+            </nav>
+        </header>
+
+        <div id="loading" class="spinner"></div>
+
+        <main id="detailContent" style="display: none;">
+            <div class="glass-card fade-in" style="margin-bottom: 2rem;">
+                <h2>掃描條件明細</h2>
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">紀錄 ID</div>
+                        <div class="detail-value" id="lblId">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">掃描日期</div>
+                        <div class="detail-value" id="lblDate">-</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">策略名稱</div>
+                        <div class="detail-value">
+                            <span class="badge" id="lblStrategy">-</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">建立時間</div>
+                        <div class="detail-value" id="lblCreated">-</div>
+                    </div>
+                </div>
+                
+                <h3 style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase;">策略參數 (JSON)</h3>
+                <pre id="lblConditions"></pre>
+            </div>
+
+            <div class="glass-card fade-in" style="animation-delay: 0.2s;">
+                <h2>選股結果 (<span id="resultCount">0</span> 檔)</h2>
+                <div class="table-container">
+                    <table id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>股票代號</th>
+                                <th>最新收盤價</th>
+                                <th>成交量</th>
+                                <th>指標數值</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                            <!-- Results will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            if (id) {
+                fetchRecordDetail(id);
+            } else {
+                alert('缺少紀錄 ID');
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>
