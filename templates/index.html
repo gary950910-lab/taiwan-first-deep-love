@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧選股與策略回測系統 - 個股 K 線視覺化</title>
+    
+    <!-- 引入 style.css -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- 引入 TradingView Lightweight Charts 官方 CDN 資源 -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- 頂部導覽與系統狀態 -->
+        <header>
+            <div class="logo-container">
+                <h1>智慧選股與策略回測系統 <span class="logo-badge">F-04</span></h1>
+            </div>
+            <div class="system-status">
+                <div class="status-dot"></div>
+                <span>系統服務正常</span>
+            </div>
+        </header>
+
+        <!-- API 錯誤提示區塊 -->
+        <div id="error-banner" class="error-message">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <span id="error-text">錯誤：無法取得資料</span>
+        </div>
+
+        <!-- 主要佈局：左側控制台，右側圖表 -->
+        <div class="main-grid">
+            
+            <!-- 左側控制面板 -->
+            <aside class="glass-card">
+                <h2 class="card-title">個股篩選與設定</h2>
+                
+                <!-- 搜尋輸入框 -->
+                <div class="search-box">
+                    <input type="text" id="ticker-input" placeholder="請輸入股號 (如: 2330)" value="2330" autocomplete="off">
+                    <button id="search-btn">查詢</button>
+                </div>
+
+                <!-- 快速選股推薦 -->
+                <div class="quick-select">
+                    <span class="quick-title">熱門台股與大盤</span>
+                    <div class="ticker-tags">
+                        <button class="tag-btn active" data-ticker="2330">2330 台積電</button>
+                        <button class="tag-btn" data-ticker="2317">2317 鴻海</button>
+                        <button class="tag-btn" data-ticker="2454">2454 聯發科</button>
+                        <button class="tag-btn" data-ticker="8069">8069 元太</button>
+                        <button class="tag-btn" data-ticker="^TWII">^TWII 加權指數</button>
+                    </div>
+                </div>
+
+                <!-- 控制項設定 -->
+                <div class="control-section">
+                    
+                    <!-- 時間區間 -->
+                    <div class="control-group">
+                        <span class="control-label">歷史區間 (Period)</span>
+                        <div class="period-btn-group">
+                            <button class="period-btn" data-period="1mo">1月</button>
+                            <button class="period-btn" data-period="3mo">3月</button>
+                            <button class="period-btn" data-period="6mo">6月</button>
+                            <button class="period-btn active" data-period="1y">1年</button>
+                        </div>
+                    </div>
+
+                    <!-- 技術指標開關 -->
+                    <div class="control-group">
+                        <span class="control-label">技術指標疊加 (MA)</span>
+                        <div class="indicator-switch-list">
+                            
+                            <!-- MA5 -->
+                            <div class="switch-item">
+                                <div class="switch-info">
+                                    <div class="indicator-dot dot-ma5"></div>
+                                    <span class="indicator-name">MA5 <span class="indicator-天期">週線</span></span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-ma5" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- MA20 -->
+                            <div class="switch-item">
+                                <div class="switch-info">
+                                    <div class="indicator-dot dot-ma20"></div>
+                                    <span class="indicator-name">MA20 <span class="indicator-天期">月線</span></span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-ma20" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <!-- MA60 -->
+                            <div class="switch-item">
+                                <div class="switch-info">
+                                    <div class="indicator-dot dot-ma60"></div>
+                                    <span class="indicator-name">MA60 <span class="indicator-天期">季線</span></span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-ma60" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </aside>
+
+            <!-- 右側主要 K 線面板 -->
+            <main class="chart-main-panel">
+                
+                <!-- 即時股價看板 -->
+                <div class="glass-card">
+                    <div class="ticker-quote-bar">
+                        <div class="quote-left">
+                            <span id="display-name" class="quote-name">載入中...</span>
+                            <span id="display-ticker" class="quote-ticker">----</span>
+                        </div>
+                        <div class="quote-right">
+                            <div class="quote-metrics">
+                                <span id="display-price" class="quote-price">--.--</span>
+                                <span id="display-change" class="quote-change">--.-- (--.--)</span>
+                            </div>
+                            <div class="quote-volume-box">
+                                <span class="vol-label">今日成交量 (張/股)</span>
+                                <span id="display-volume" class="vol-value">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- K 線繪圖卡片 -->
+                <div class="glass-card chart-display-card">
+                    
+                    <!-- 懸浮數據提示 -->
+                    <div id="chart-tooltip" class="chart-tooltip">
+                        <div class="tooltip-item"><span>時間</span><strong id="tip-date">--</strong></div>
+                        <div class="tooltip-item"><span>開</span><strong id="tip-open">--</strong></div>
+                        <div class="tooltip-item"><span>高</span><strong id="tip-high">--</strong></div>
+                        <div class="tooltip-item"><span>低</span><strong id="tip-low">--</strong></div>
+                        <div class="tooltip-item"><span>收</span><strong id="tip-close">--</strong></div>
+                        <div class="tooltip-item"><span>量</span><strong id="tip-vol">--</strong></div>
+                    </div>
+
+                    <!-- Loading 遮罩 -->
+                    <div id="chart-loader" class="chart-loader">
+                        <div class="spinner"></div>
+                        <span>正在從 yfinance 載入雲端數據...</span>
+                    </div>
+
+                    <!-- TradingView 圖表掛載點 -->
+                    <div id="chart-container"></div>
+                </div>
+
+                <!-- 詳細歷史價格明細 -->
+                <div class="glass-card details-table-card">
+                    <h2 class="card-title">歷史價格與指標明細 (近 10 日)</h2>
+                    <div class="table-wrapper">
+                        <table class="details-table">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>開盤價</th>
+                                    <th>最高價</th>
+                                    <th>最低價</th>
+                                    <th>收盤價</th>
+                                    <th>漲跌幅</th>
+                                    <th>成交量 (張)</th>
+                                    <th>MA5</th>
+                                    <th>MA20</th>
+                                    <th>MA60</th>
+                                </tr>
+                            </thead>
+                            <tbody id="details-table-body">
+                                <tr>
+                                    <td colspan="10" style="text-align: center; color: var(--text-muted);">暫無數據，請先查詢股票</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <!-- 引入 app.js -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+flask
+yfinance
+pandas
+numpy
+python-dotenv
+fastapi
+uvicorn
+yfinance
+pandas
+numpy
+pydantic
+sqlite3
