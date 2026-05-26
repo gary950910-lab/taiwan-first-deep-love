@@ -3,6 +3,594 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股量化選股與策略回測系統</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Portfolio & Industry Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- TradingView Lightweight Charts for Candlestick and Technical Indicators -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-chart-line logo-icon"></i>
+                <div class="brand-text">
+                    <h1>Taiwan Stock</h1>
+                    <span>Screener & Backtest</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-target="screening-section">
+                    <i class="fa-solid fa-filter"></i> <span>即時選股篩選</span>
+                </a>
+                <a href="#" class="nav-item" data-target="history-section">
+                    <i class="fa-solid fa-folder-open"></i> <span>篩選歷史紀錄</span>
+                </a>
+                <a href="#" class="nav-item" data-target="backtest-section">
+                    <i class="fa-solid fa-rotate-left"></i> <span>策略回測分析</span>
+                </a>
+                <a href="#" class="nav-item" data-target="chart-section">
+                    <i class="fa-solid fa-chart-candlestick"></i> <span>個股技術分析</span>
+                </a>
+                <a href="#" class="nav-item" data-target="sync-section">
+                    <i class="fa-solid fa-arrows-rotate"></i> <span>數據同步設定</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="version">v1.0.0</span>
+                <span class="status-indicator online">System Active</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-title">
+                    <h2 id="current-section-title">即時選股篩選</h2>
+                    <p id="current-section-subtitle">客觀數據驅動，快速篩選台股強勢標的</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="quick-sync-btn">
+                        <i class="fa-solid fa-arrows-rotate"></i> 同步台股清單
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Notification Toast Container -->
+            <div id="toast-container" class="toast-container"></div>
+
+            <!-- SECTION 1: Screening -->
+            <section id="screening-section" class="content-section active">
+                <div class="grid grid-cols-12 gap-6">
+                    <!-- Left: Screening Form -->
+                    <div class="col-span-12 lg:col-span-4 card filter-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-sliders text-accent"></i> 篩選條件設定</h3>
+                        </div>
+                        <form id="screening-form" class="card-body">
+                            <!-- Target Market Scope -->
+                            <div class="form-group">
+                                <label for="scope-select">篩選範圍</label>
+                                <select id="scope-select" class="form-control">
+                                    <option value="All">全部台股 (上市與上櫃)</option>
+                                    <option value="Taiwan50">台灣 50 成分股</option>
+                                    <option value="Listed">僅上市股票</option>
+                                    <option value="OTC">僅上櫃股票</option>
+                                </select>
+                            </div>
+
+                            <!-- MA Bias -->
+                            <div class="accordion-item">
+                                <div class="accordion-header">
+                                    <span>MA 均線 & 乖離率</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                <div class="accordion-body">
+                                    <div class="form-row">
+                                        <div class="form-group col">
+                                            <label>MA60 乖離率下限 (%)</label>
+                                            <input type="number" step="0.1" id="ma60-bias-min" placeholder="例: -5" class="form-control">
+                                        </div>
+                                        <div class="form-group col">
+                                            <label>MA60 乖離率上限 (%)</label>
+                                            <input type="number" step="0.1" id="ma60-bias-max" placeholder="例: 5" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="form-group margin-top-sm">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="ma-consolidation-chk">
+                                            <span class="checkmark"></span>
+                                            均線糾結 (MA5, MA10, MA20 糾結)
+                                        </label>
+                                    </div>
+                                    <div class="form-group" id="ma-consolidation-val-group" style="display:none;">
+                                        <label>糾結程度寬度下限 (%)</label>
+                                        <input type="number" step="0.1" id="ma-consolidation-val" value="3.0" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bollinger Bands -->
+                            <div class="accordion-item">
+                                <div class="accordion-header">
+                                    <span>布林通道</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                <div class="accordion-body">
+                                    <div class="form-group">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="bb-break-upper-chk">
+                                            <span class="checkmark"></span>
+                                            突破上軌 (今日收盤突破布林上軌)
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="bb-within-chk">
+                                            <span class="checkmark"></span>
+                                            通道內部 (收盤在布林上下軌之內)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- KD (9,3,3) -->
+                            <div class="accordion-item">
+                                <div class="accordion-header">
+                                    <span>KD 技術指標</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                <div class="accordion-body">
+                                    <div class="form-row">
+                                        <div class="form-group col">
+                                            <label>K值下限</label>
+                                            <input type="number" step="1" id="kd-k-min" placeholder="0" class="form-control">
+                                        </div>
+                                        <div class="form-group col">
+                                            <label>K值上限</label>
+                                            <input type="number" step="1" id="kd-k-max" placeholder="100" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="form-row margin-top-sm">
+                                        <div class="form-group col">
+                                            <label>D值下限</label>
+                                            <input type="number" step="1" id="kd-d-min" placeholder="0" class="form-control">
+                                        </div>
+                                        <div class="form-group col">
+                                            <label>D值上限</label>
+                                            <input type="number" step="1" id="kd-d-max" placeholder="100" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="form-group margin-top-sm">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="kd-cross-up-chk">
+                                            <span class="checkmark"></span>
+                                            KD 黃金交叉 (K線上穿D線)
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="kd-cross-down-chk">
+                                            <span class="checkmark"></span>
+                                            KD 死亡交叉 (K線下穿D線)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- MACD -->
+                            <div class="accordion-item">
+                                <div class="accordion-header">
+                                    <span>MACD 指標</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                <div class="accordion-body">
+                                    <div class="form-group">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="macd-cross-up-chk">
+                                            <span class="checkmark"></span>
+                                            MACD 黃金交叉 (DIF上穿DEM)
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="macd-cross-down-chk">
+                                            <span class="checkmark"></span>
+                                            MACD 死亡交叉 (DIF下穿DEM)
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="macd-osc-pos-chk">
+                                            <span class="checkmark"></span>
+                                            柱狀體大於0 (OSC > 0)
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="macd-osc-neg-chk">
+                                            <span class="checkmark"></span>
+                                            柱狀體小於0 (OSC < 0)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Volume & Price High -->
+                            <div class="accordion-item">
+                                <div class="accordion-header">
+                                    <span>量能與價位新高</span>
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                                <div class="accordion-body">
+                                    <div class="form-group">
+                                        <label>量能倍數下限 (成交量/5日均量)</label>
+                                        <input type="number" step="0.1" id="volume-mult-min" placeholder="例: 1.5" class="form-control">
+                                    </div>
+                                    <div class="form-group margin-top-sm">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="is-20d-high-chk">
+                                            <span class="checkmark"></span>
+                                            創20日新高 (今日最高價創20日最高)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save Session -->
+                            <div class="form-group margin-top-md">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="save-session-chk" checked>
+                                    <span class="checkmark"></span>
+                                    儲存本次篩選紀錄至資料庫
+                                </label>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-primary btn-block margin-top-md" id="run-screening-btn">
+                                <i class="fa-solid fa-magnifying-glass"></i> 開始盤後篩選
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Matches List -->
+                    <div class="col-span-12 lg:col-span-8 grid grid-rows-none gap-6">
+                        <!-- Chart Card -->
+                        <div class="card industry-card">
+                            <div class="card-header justify-between">
+                                <h3><i class="fa-solid fa-chart-pie text-accent"></i> 篩選結果產業別分佈</h3>
+                                <span class="badge" id="screen-total-badge">0 檔符合</span>
+                            </div>
+                            <div class="card-body chart-container-wrapper">
+                                <canvas id="industryChart"></canvas>
+                                <div id="no-industry-data" class="no-data-placeholder">
+                                    <i class="fa-solid fa-chart-column"></i>
+                                    <p>暫無資料，請設定條件並執行篩選</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table Card -->
+                        <div class="card results-card">
+                            <div class="card-header justify-between">
+                                <h3><i class="fa-solid fa-list-check text-accent"></i> 符合條件個股清單</h3>
+                                <div class="table-actions">
+                                    <input type="text" id="filter-results-table" placeholder="快速搜尋..." class="form-control form-control-sm">
+                                </div>
+                            </div>
+                            <div class="card-body overflow-x">
+                                <table class="table" id="screen-results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>代碼</th>
+                                            <th>股名</th>
+                                            <th>市場</th>
+                                            <th>產業</th>
+                                            <th>收盤價</th>
+                                            <th>MA60乖離</th>
+                                            <th>KD (K/D)</th>
+                                            <th>MACD OSC</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="9" class="text-center text-muted">請點擊左側「開始盤後篩選」按鈕執行篩選。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: History -->
+            <section id="history-section" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-folder-open text-accent"></i> 歷次篩選紀錄管理</h3>
+                    </div>
+                    <div class="card-body overflow-x">
+                        <table class="table" id="history-sessions-table">
+                            <thead>
+                                <tr>
+                                    <th>紀錄ID</th>
+                                    <th>篩選時間</th>
+                                    <th>篩選範圍</th>
+                                    <th>套用條件</th>
+                                    <th>符合檔數</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">正在加載歷史紀錄...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Session Details Modal/Drawer (Shown below tables when session clicked) -->
+                <div id="session-details-panel" class="card margin-top-lg" style="display:none;">
+                    <div class="card-header justify-between">
+                        <h3 id="detail-session-title">篩選紀錄細節</h3>
+                        <div class="actions">
+                            <button class="btn btn-primary btn-sm" id="detail-run-backtest-btn">
+                                <i class="fa-solid fa-rotate-left"></i> 回測此紀錄
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="close-detail-btn">關閉</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-12 gap-6 margin-bottom-md">
+                            <div class="col-span-12 md:col-span-6 info-box">
+                                <strong>篩選時間：</strong> <span id="detail-timestamp">-</span>
+                            </div>
+                            <div class="col-span-12 md:col-span-6 info-box">
+                                <strong>篩選範圍：</strong> <span id="detail-scope">-</span>
+                            </div>
+                        </div>
+                        <div class="margin-bottom-md">
+                            <strong>已套用條件：</strong>
+                            <div class="filters-badges-list margin-top-xs" id="detail-filters-list"></div>
+                        </div>
+                        <div class="overflow-x">
+                            <table class="table" id="session-detail-stocks-table">
+                                <thead>
+                                    <tr>
+                                        <th>代碼</th>
+                                        <th>股名</th>
+                                        <th>產業</th>
+                                        <th>篩選日收盤價</th>
+                                        <th>MA60乖離</th>
+                                        <th>KD值</th>
+                                        <th>MACD OSC</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Backtest -->
+            <section id="backtest-section" class="content-section">
+                <div class="grid grid-cols-12 gap-6">
+                    <!-- Left: Backtest Parameters -->
+                    <div class="col-span-12 lg:col-span-4 card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-gears text-accent"></i> 回測參數設定</h3>
+                        </div>
+                        <form id="backtest-form" class="card-body">
+                            <!-- Selected Session -->
+                            <div class="form-group">
+                                <label for="backtest-session-select">選擇篩選紀錄</label>
+                                <select id="backtest-session-select" class="form-control">
+                                    <option value="">請選擇或前往「歷史紀錄」點擊回測</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="stop-loss-input">停損比例 (SL %)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.1" min="0.1" max="100" id="stop-loss-input" value="7.0" class="form-control">
+                                    <span class="input-group-addon">%</span>
+                                </div>
+                                <span class="help-block text-xs">跌破 entry * (1 - SL%) 觸發停損賣出。</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="take-profit-input">停利比例 (TP %)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.1" min="0.1" max="1000" id="take-profit-input" value="15.0" class="form-control">
+                                    <span class="input-group-addon">%</span>
+                                </div>
+                                <span class="help-block text-xs">突破 entry * (1 + TP%) 觸發停利賣出。</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="holding-days-input">最大持有天數 (交易日)</label>
+                                <input type="number" step="1" min="1" max="250" id="holding-days-input" value="60" class="form-control">
+                                <span class="help-block text-xs">若未觸發停損停利，將於持有第 N 個交易日以收盤價賣出。</span>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block margin-top-md" id="run-backtest-btn">
+                                <i class="fa-solid fa-play"></i> 執行策略回測
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Backtest Results -->
+                    <div class="col-span-12 lg:col-span-8 grid grid-rows-none gap-6">
+                        <!-- Key Stats Cards -->
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="card stat-card bg-glass text-center">
+                                <span class="stat-label">策略勝率</span>
+                                <h2 class="stat-value text-rose" id="bt-winrate">0.0%</h2>
+                            </div>
+                            <div class="card stat-card bg-glass text-center">
+                                <span class="stat-label">盈虧比</span>
+                                <h2 class="stat-value text-accent" id="bt-pl-ratio">0.00</h2>
+                            </div>
+                            <div class="card stat-card bg-glass text-center">
+                                <span class="stat-label">平均報酬率</span>
+                                <h2 class="stat-value" id="bt-avg-return">0.0%</h2>
+                            </div>
+                            <div class="card stat-card bg-glass text-center">
+                                <span class="stat-label">策略最大回撤</span>
+                                <h2 class="stat-value text-green" id="bt-mdd">0.0%</h2>
+                            </div>
+                        </div>
+
+                        <!-- Equity Curve Chart -->
+                        <div class="card">
+                            <div class="card-header justify-between">
+                                <h3><i class="fa-solid fa-chart-line text-accent"></i> 策略資產淨值曲線 (vs ^TWII 基準指數)</h3>
+                                <span class="text-xs text-muted">起點歸一化為 100</span>
+                            </div>
+                            <div class="card-body chart-container-wrapper">
+                                <canvas id="equityChart"></canvas>
+                                <div id="no-backtest-data" class="no-data-placeholder">
+                                    <i class="fa-solid fa-chart-gantt"></i>
+                                    <p>暫無回測數據，請設定參數並點擊回測</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trade Logs Table -->
+                        <div class="card">
+                            <div class="card-header justify-between">
+                                <h3><i class="fa-solid fa-receipt text-accent"></i> 回測明細日誌</h3>
+                                <span class="badge" id="bt-trades-count">0 筆交易</span>
+                            </div>
+                            <div class="card-body overflow-x">
+                                <table class="table" id="backtest-trades-table">
+                                    <thead>
+                                        <tr>
+                                            <th>代碼</th>
+                                            <th>股名</th>
+                                            <th>進場日期</th>
+                                            <th>進場開盤</th>
+                                            <th>出場日期</th>
+                                            <th>出場價格</th>
+                                            <th>回測報酬</th>
+                                            <th>基準報酬</th>
+                                            <th>出場原因</th>
+                                            <th>最大回撤</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="11" class="text-center text-muted">請執行回測查看明細。</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: Stock Chart -->
+            <section id="chart-section" class="content-section">
+                <div class="card margin-bottom-lg">
+                    <div class="card-header justify-between">
+                        <div class="flex items-center gap-4">
+                            <h3 id="chart-stock-title">個股技術指標分析</h3>
+                            <div class="flex gap-2">
+                                <span class="badge badge-primary" id="chart-stock-market">市場</span>
+                                <span class="badge badge-secondary" id="chart-stock-industry">產業</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="chart-search-input" placeholder="輸入股號 (如2330)..." class="form-control form-control-sm" style="width:180px;">
+                            <button class="btn btn-primary btn-sm" id="chart-search-btn">切換個股</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Chart container for TradingView Lightweight Charts -->
+                        <div class="tradingview-chart-wrapper">
+                            <!-- Main Price Pane (Candlesticks + MA + BB) -->
+                            <div class="chart-pane-title">價格走勢與均線布林通道 (K-Line, MAs, Bollinger Bands)</div>
+                            <div id="tv-price-chart" class="tv-chart-container"></div>
+                            
+                            <!-- Volume Pane -->
+                            <div class="chart-pane-title margin-top-md">成交量 (Volume)</div>
+                            <div id="tv-volume-chart" class="tv-chart-container-sm"></div>
+
+                            <!-- KD Pane -->
+                            <div class="chart-pane-title margin-top-md">KD 指標 (9, 3, 3)</div>
+                            <div id="tv-kd-chart" class="tv-chart-container-sm"></div>
+
+                            <!-- MACD Pane -->
+                            <div class="chart-pane-title margin-top-md">MACD 指標 (12, 26, 9)</div>
+                            <div id="tv-macd-chart" class="tv-chart-container-sm"></div>
+                        </div>
+                        <div class="margin-top-md text-xs text-muted text-center">
+                            * 註：均線色彩：MA5 (黃)、MA10 (橘)、MA20 (綠)、MA60 (紫)；布林通道：上下軌為灰色虛線；KD：K值 (黃)、D值 (藍)；MACD：DIF (橘)、DEM (藍)。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5: Data Sync -->
+            <section id="sync-section" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-arrows-rotate text-accent"></i> 系統數據同步設定</h3>
+                    </div>
+                    <div class="card-body text-center" style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+                        <i class="fa-solid fa-database text-accent margin-bottom-md" style="font-size: 64px; display:block;"></i>
+                        <h2>同步台股上市與上櫃股票代碼</h2>
+                        <p class="text-muted margin-top-sm margin-bottom-lg">
+                            同步程序將串接證交所 (TWSE) 與櫃買中心 (TPEx) 的最新證券公開名冊，下載並儲存所有標準 4 碼股票定義（過濾掉認購/認售權證、ETFs 與可轉債），作為本系統選股與回測的基礎範圍。
+                        </p>
+                        
+                        <div class="info-box margin-bottom-lg text-left">
+                            <h4 class="font-medium"><i class="fa-solid fa-circle-info text-accent"></i> 注意事項：</h4>
+                            <ul class="margin-top-xs" style="padding-left: 20px; line-height: 1.6;">
+                                <li>證交所與櫃買中心數據抓取通常耗時約 5-15 秒。</li>
+                                <li>系統會自動採用 curl.exe 下載，避開防火牆的安全限制。</li>
+                                <li>同步將自動更新 `stocks` 關聯表，原有歷史篩選紀錄與回測將自動保存不受影響。</li>
+                            </ul>
+                        </div>
+
+                        <div class="sync-status-box margin-bottom-lg" id="sync-status-area" style="display:none;">
+                            <div class="spinner margin-bottom-sm"></div>
+                            <p class="font-medium text-accent">正在抓取證交所與櫃買中心網頁...</p>
+                        </div>
+
+                        <button class="btn btn-primary btn-lg" id="start-sync-btn">
+                            <i class="fa-solid fa-arrows-rotate"></i> 立即執行全市場數據同步
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Custom JS -->
+    <script src="/static/app.js"></script>
     <title>歷史掃描紀錄 | 台股自動篩選器</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
