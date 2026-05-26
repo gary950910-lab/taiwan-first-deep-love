@@ -17,3 +17,21 @@ instance/
 # OS files
 .DS_Store
 Thumbs.db
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+instance/
+.DS_Store
+Thumbs.db
+*.pyc
+extracted_pdf.txt
+.DS_Store
+.env
+.vscode/
+.idea/
+backend/.yf_cache/
+backend/taiwan_stock.db
+backend/temp_*.html
