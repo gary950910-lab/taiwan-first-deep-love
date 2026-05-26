@@ -1,4 +1,12 @@
 __pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+instance/
+.DS_Store
+Thumbs.db
 *.pyc
 extracted_pdf.txt
 .DS_Store
