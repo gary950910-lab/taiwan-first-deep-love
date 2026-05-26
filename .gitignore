@@ -1,5 +1,10 @@
 __pycache__/
 *.pyc
+extracted_pdf.txt
+.DS_Store
+.env
+.vscode/
+.idea/
 backend/.yf_cache/
 backend/taiwan_stock.db
 backend/temp_*.html
