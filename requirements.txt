@@ -1,3 +1,8 @@
+flask
+yfinance
+pandas
+numpy
+python-dotenv
 fastapi
 uvicorn
 yfinance

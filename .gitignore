@@ -1,3 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+.venv/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.env
+
+# SQLite and Local database
+instance/
+
+# OS files
+.DS_Store
+Thumbs.db
 __pycache__/
 *.py[cod]
 *$py.class
