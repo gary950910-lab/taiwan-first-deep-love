@@ -35,3 +35,4 @@ extracted_pdf.txt
 backend/.yf_cache/
 backend/taiwan_stock.db
 backend/temp_*.html
+screener_data.db
