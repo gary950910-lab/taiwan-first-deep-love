@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, date
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,16 +18,7 @@ init_db()
 
 app = FastAPI(title="Taiwan Stock Screener & Backtester API")
 
-# Configure CORS
-from fastapi import FastAPI, HTTPException, Body
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
-import uvicorn
-
-import database
-
-app = FastAPI(title="Taiwan Stock Screener API")
+from backend import database
 
 # 設定 CORS 以允許前端存取
 app.add_middleware(
@@ -344,9 +335,6 @@ def read_root():
         return FileResponse(index_path)
     return {"message": "Taiwan Stock Screener Backend is running. Frontend index.html not found yet."}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
 # 應用程式啟動時初始化資料庫
 @app.on_event("startup")
 def startup_event():
@@ -412,4 +400,5 @@ def delete_record(history_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    import uvicorn
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)

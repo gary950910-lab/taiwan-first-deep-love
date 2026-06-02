@@ -9,4 +9,3 @@ yfinance
 pandas
 numpy
 pydantic
-sqlite3
